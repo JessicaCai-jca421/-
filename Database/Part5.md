@@ -216,3 +216,46 @@ Cost to Read Records
   - 对于较大的选择，可能比文件扫描更糟糕
 
 ![1655604727378](image/Part5/1655604727378.png)
+
+![1655604775576](image/Part5/1655604775576.png)
+
+###### Complex Selection
+
+A complex selection is made of at least two terms connected by and (^) and or (v)
+
+- The terms can reference different or the same attributes
+- Conjunctions are more selective (and)
+- Disjunctions are less selective (or)
+
+Complex selections的满足方式与 simple selections的满足方式大致相同
+
+- If no index on any of the selection attributes scan the file
+- Use indices on selection attributes where possible
+- 索引的使用取决于selection和索引的类型
+
+###### Selections with no Disjunctions
+
+- 如果只有一个索引可用，请使用该索引并在主存中应用其他选择
+  - Either there is an index on only one of the attributes
+  - 或具有引用多个选择属性的复合键的索引
+  - 注意哈希索引的使用限制
+- If multiple indexes are available
+  - Either use the most selective
+  - Or collect RIDs from leaves or buckets of indexes and take the intersection
+- Selections with disjunctions are stated in conjunctive
+  normal form (CNF)
+  - A collection of conjuncts
+  - Each conjunct consists either of a single term, or multiple terms joined by or
+  - (A^ B) v C v D 三 (A v C v D) ^ (B v C v D)
+  - 这允许独立考虑每个连接
+- A conjunct can only be satisfied by indices if there is an index on all attributes of all of its disjunctive terms
+  - If all the conjuncts contain at least one disjunction with no matching index a file scan is necessary
+- Consider a selection of this form![1655605663920](image/Part5/1655605663920.png)
+  - Where each of a to f is an equality selection on an attribute
+- If each of the terms in either of the conjuncts has a
+  matching index
+  - Use the indexes to find the rids
+  - Take the union of the rids and retrieve those records
+  - For example, if there are indexes just on a, b, c, and e
+  - Use the a, b, and c indexes and take the union of the rids
+  -  Retrieve the resulting records and apply the other criteria
