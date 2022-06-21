@@ -202,4 +202,182 @@ Striping排列with镜像磁盘
 - 比起single disk sequential和random read性能都快两倍
 - 写入技能和level 1 一样差
 
-level1 和10 之所以写作性能很差 是因为其存在冗余
+level1 和10 之所以写作性能很差 是因为其存在冗余数据存储
+
+- 普通数据和冗余数据的写入不是同时进行的
+- 包括带有校验位的系统需要先读取这个然后再进行普通数据的写入
+- bit striping 的随机和顺序写入，block striping的顺序写入
+
+  - 使用先读后写的方法写入所有数据
+  - 然后重新计算校验位
+  - 在写入新的校验位来检查磁盘
+- block striping随机写入
+
+  - single disk 先读后写
+  - 阅读校验盘并且重新计算
+  - 最后写入检验
+- sequential reads
+
+  - block和bit striping的表现通常没有差别
+- random reads
+
+  - block striping的效率更高
+    - 通过位条带化，必须读取所有D磁盘才能重新创建数据文件的单个记录（和块）
+    - 通过块分条，完整记录存储在一个磁盘上，因此只需要一个磁盘即可满足随机读取通过位条带化，必须读取所有D磁盘才能重新创建数据文件的单个记录（和块
+
+
+##### Level 2 Memory Style Error Correcting Code
+
+bit striping，使用允许识别故障磁盘的方案
+
+- 只能承受单个磁盘的丢失
+- 增加了所需的磁盘数量
+
+##### Level 3 Byte Interleaved Parity
+
+bit striping，多一个磁盘
+
+- 随机读写性能差
+- 需要D+1 disk
+- 只能承受单个磁盘的丢失
+
+##### Level 4 Block Interleaved Parity
+
+Block striping，使用一个包含奇偶校验数据的冗余磁盘
+
+- 顺序读取性能好
+- 随机读取的性能非常好
+- D times fast
+- 随机写入的性能差（因为由专业检查盘
+- 接受一个drive丢失
+
+##### Level 5 Block interleaved distributed Parity
+
+解决Level 4 中的Random write 问题, 没有专用的检查磁盘，但在所有磁盘上分发奇偶校验数据
+
+- 随机写入性能相对提高
+- 读取性能略微提高
+- 顺序读写类似于 Level 4
+- 接受一个drive丢失
+
+
+##### Level 6 P+Q Redundancy
+
+可以处理多个磁盘崩溃，有两组校验数据，在四个磁盘中一般的数据是奇偶校验数据。随着磁盘的增加Redundant数据减少
+
+- 读取性能类似于Level 5
+- 写入低于level 5
+- 两组奇偶校验数据位于不同的磁盘上
+  - 这要求每个磁盘都有一个读-修改-写周期
+
+
+
+##### RAID排序
+
+其中有几点特点： 首先，带有检查盘的随机写入功能都很差，然后带有block striping的随机阅读能力跟高，然后 24是35的低阶版本
+
+Random Read：
+
+- Level 5 > Level4 >Level 10 > Level 0 > Level 2 > level 3
+
+Sequence Read:
+
+- Level 4,5 > Level 1,0,10 > Level 2,3
+
+Random Write：
+
+- Level 0 > Level 1,10 > Level 5 > Level 4 > Level 2,3
+
+Sequence Write: 
+
+- Level 4,5
+
+
+### Record and Page Formate
+
+##### 数据组织
+
+Attributes = fileds
+
+数据存储在Page中，固定大小的单位
+
+Page包含了: 
+
+* page header: 管理数据
+* Slots：每个slots包含一个record
+
+RID： record 的id，使其唯一标识，通常由page#和slots#组成 Ex：RID：123，2
+
+Record分为 固定大小和变换大小两种
+
+- Fixed Length
+  - Relative Location： ex： find filed3 = base address + size（filed1）+ size（filed2）
+  - Field 的个数和大小都是固定的
+  - 在page中有两种排列方式
+    - Packed拥挤的
+      - 简单好找，但是移动记录会耗时并且使得RID失效
+    - Bit Array
+      - header包括一个bit array 用来记录那个slots中存储了数据
+      - 不需要重新排列数据但是监管力度大
+- Variable Length
+  - 方案一 是在每个field之后增加分割符号（delimiters）
+  - 方案二 是在record header中储存其他数据
+  - 存储数据的方式
+    - 包含一个slots目录，每个是一个pair包括了纪录offset和长度
+    - 可以自由移动
+    - 灵活的
+    - 相比于fixed length更加复杂
+
+##### Large Fields- 不适合单个页面的数据 （LOB 大对象数据类型）
+
+- 大型数据，图片视频等等
+- 可以转换成二进制数据或者字符 BLOB，CLOB
+- 储存在连续pape中
+
+#### Files
+
+包含相关记录的页面被组织成file
+
+一个table代表一个File
+
+##### Heap File
+
+没有任何排序方式，它们保证可以通过重复请求下一条记录来检索文件中的所有记录
+
+因为是linear search所以效率低下
+
+两种组织：
+
+- Linked list
+- Directory
+
+#### Buffer Management
+
+buffer pool： 主内存的合集
+
+buffer manager负责将数据从磁盘中带到内存
+
+* page映射到frames
+
+Page请求步骤:
+
+- 首先在main memory frame 中包括
+  - dirty bit： 如果页面modified 则为1
+  - pin count： 释放页面时递减
+- 如果page已经在buffer pool中，则增加pin count
+- 如果有空frame，则将page放入其中并且设定pin count为 1
+- 如果没有空frame，则寻找pool中 pin count 为0的框架并且将page替换
+  - 如果没有pin为0 的情况则需要等待或者终止
+
+
+buffer 替换原则：
+
+- Random
+- FIFO
+- LRU：least recently used（clock replacement）
+  - 开销比较小
+  - 没有队列但事实设置frame的编号从0-B-1 B是frame数
+  - 每个frame都有一个引用位，当读取或者访问时设置为0
+  - 当前变量最初为0，用于显示要考虑替换的下一帧current variable最初为0，
+  - 替换步骤：
+- MRU
