@@ -124,7 +124,6 @@ The levels rotate through the attributes of the tree
 
 ##### Query Model and Metrics
 
-
 ![1655600698745](image/Part5/1655600698745.png)
 
 Computation Model
@@ -154,7 +153,7 @@ For SQL operators the operand is a table
 - 如果文件已排序且没有索引，则使用二进制搜索
 - 在条件中的属性上使用索引
 
-cost： 
+cost：
 
 - No index on the selection attribute
   - Linear search by scanning file, cost is B reads
@@ -258,4 +257,104 @@ Complex selections的满足方式与 simple selections的满足方式大致相�
   - Take the union of the rids and retrieve those records
   - For example, if there are indexes just on a, b, c, and e
   - Use the a, b, and c indexes and take the union of the rids
-  -  Retrieve the resulting records and apply the other criteria
+  - Retrieve the resulting records and apply the other criteria
+
+## External sorting
+
+在读取时对数据进行排列时有必要的
+
+- 使用Order BY
+- ways to sort :
+  - Main memory sorting
+  - B+ tree index
+  - mult-way mergesort
+
+#### Naive External Merge Sort
+
+对Disk data使用 merge sort
+
+- Initial Step- read 2 pages of data from file
+  - 排序之后写入硬盘
+  - 得到一个B/2的结果
+- 
+
+## Projections
+
+projection and deplicate
+
+##### Sort Projection 
+
+- 读取M页并删除不需要的属性
+- 对记录进行排序，并删除所有重复项
+- 将排序后的运行写入磁盘
+- 对文件的其余部分重复此操作，总成本为2B
+- 根据需要对第一阶段的输出执行合并过程
+  - 删除遇到的任何重复项
+  - 如果只需要一个合并过程，则成本为≈ 1B
+- 总成本为≈ 3B
+
+##### Hash Projections
+
+分为两个stages
+
+- Partitioning
+  - 使用哈希函数h划分为M-1个分区
+  - 每个分区有一个输出缓冲区和一个输入缓冲区
+  - 文件一次读取一页到主存，每个记录都散列到适当的缓冲区
+  - Output buffers are written out when full
+- Probing
+  - 这个阶段的目的是消除重复，会用到第二个hash function
+  - h2 函数用于reduce main memory costs
+    - 该函数会构造一个in-memory hash table
+    - 当两个record hash到了相同位置时检查他们是否重复，可以使用in-memory sorting 来删除重复项
+    - 如果在分区阶段生成的每个分区都可以放入主内存，那么成本是
+      - 分割阶段：2B
+      - 重复消除阶段：B，总成本为3B
+      - 这与使用排序的投影成本相同
+
+比较sort和hash
+
+- 成本相同为3B
+- hash projection可以区分不同的table
+- 
+
+
+## Joins
+
+Cartesian Product：设D1、...、Dn是n个域。D1、...、Dn上的笛卡尔乘积定义为集合 D1×...×Dn ={ (d1 , ..., dn ) | di ∈Di，1≤i≤n }。
+
+EX:  D1={我，你} D2={他，她}
+
+D1xD2：{我，她}，{我，他}, {你, 他}.....
+
+Join: 跟随selection的Cartesian Product，selection作为join的条件
+
+#### Join的几种类型：
+
+Nature Join： 融合两个tables通过相同的attritubes name 和datatype
+
+Inner Join：两个table重合的数据，会返回包含所有属性的来自于这两个table的相同的colums
+
+
+#### Nested Loop Joins
+
+有三种nested loop joins的算法，用来比较来自不同表的数据是否相同
+
+* Tuple nested loop join
+
+  1. cost= B(R) + (T(R) * B(S))
+  2. 一次读取 one page of R，scan S 然后将R中的每个record和S中的每个record作比较，最后返回的结果排序和R相同
+  3. 进阶版本 就是扫描和对比同时进行，运行时间是Cost = B(R) + (B(R) * B(S))
+  4. 需要两个input buffer和一个output buffer
+* Block Nested Loop Join
+
+  1. 相比于上一个算法，这个算法更高效的方法是通过增大input buffer for R，将外层循环的行/结果集存入join buffer, 内层循环的每一行与整个buffer中的记录做比较，从而减少内层循环的次数（老师的方法我不太懂  所以就直接看网上了）
+  2. 举例来说 加入在join buffer中放入十条记录，然后innerloop时可以直接匹配这十行，这是效率就是simple的十倍
+  3. 需要加东西
+* Index Nested Loop Join
+
+  - 对于内层表使用index，通过外层表匹配条件直接与内层表索引进行匹配
+  - 使用条件是内表层的colmn 具有index
+
+
+#### Sort-Merge Join
