@@ -15,7 +15,6 @@ Our goals:
 
 加密：给数据进行加密码保护，通常都是打开是输入密码，还有隐藏、伪装等效果。市面上加密类的软件也很多，可以根据自己的具体需求进行挑选。
 
-
 解密：解除密码保护，也就是恢复未加密时的状态，变成正常的数据。如果不想让你的文件继续保持加密效果，那就可以选择解密，来让它不再受保护。有的可以临时解密，使用的时候是解密状态，关闭后会自动恢复加密状态这种。
 
 ### Cryptography密码学
@@ -37,8 +36,6 @@ Kerckhoffs’ Principle states that: 密码系统的密钥应该是隐藏的，�
 3. B接收EncK（M），并使用解密过程Dec（）和密钥K对其进行解密
 4. Dec（Enc（M））=M；B接收明文消息M。
    1. this is end-to-end encryption(gmail不是，facebook和WhatsApp)
-
-
 
 Simple system：该密码系统的凯撒密码问题：
 
@@ -81,7 +78,7 @@ PKF传送key， AES传输msg
 
 ##### Solving the Frequency Analysis Problem
 
-A lot of home-made crypto has this problem 
+A lot of home-made crypto has this problem
 
 我们无法轻松做到这一点——所有替换密码对频率分析（密码）都很弱
 
@@ -198,3 +195,27 @@ Enigma isn't OTP b/c it didn't have a truly uniform random bit generation
 ● AES是当前的标准；广泛使用
 
 ● 流密码通常更快（并且可以提前生成密钥流）
+
+##### Public Key Encryption (PKE)
+
+在SKE中，锁定和打开需要同一把钥匙，如果我们希望它们需要不同的钥匙呢？这称为公钥加密
+
+有两个程序的两个键：
+
+公钥用于加密
+
+私钥用于解密
+
+Alice生成两个键。
+
+（它们在数学上是相关的。）
+
+然后，Alice发布她的公钥：
+
+任何人都可以加密
+
+只有爱丽丝才能解密
+
+示例：RSA、ElGamal、ECC
+
+任何人都可以写一条只有爱丽丝才能写的消息

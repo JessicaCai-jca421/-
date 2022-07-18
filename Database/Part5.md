@@ -282,7 +282,7 @@ Complex selections的满足方式与 simple selections的满足方式大致相�
 
 projection and deplicate
 
-##### Sort Projection 
+##### Sort Projection
 
 - 读取M页并删除不需要的属性
 - 对记录进行排序，并删除所有重复项
@@ -318,7 +318,6 @@ projection and deplicate
 - hash projection可以区分不同的table
 - 
 
-
 ## Joins
 
 Cartesian Product：设D1、...、Dn是n个域。D1、...、Dn上的笛卡尔乘积定义为集合 D1×...×Dn ={ (d1 , ..., dn ) | di ∈Di，1≤i≤n }。
@@ -334,7 +333,6 @@ Join: 跟随selection的Cartesian Product，selection作为join的条件
 Nature Join： 融合两个tables通过相同的attritubes name 和datatype
 
 Inner Join：两个table重合的数据，会返回包含所有属性的来自于这两个table的相同的colums
-
 
 #### Nested Loop Joins
 
@@ -356,5 +354,43 @@ Inner Join：两个table重合的数据，会返回包含所有属性的来自�
   - 对于内层表使用index，通过外层表匹配条件直接与内层表索引进行匹配
   - 使用条件是内表层的colmn 具有index
 
-
 #### Sort-Merge Join
+
+Assume that both tables to be joined are sorted on the join attribute联接属性排序
+
+- The tables may be joined with one pass
+  - The tables may be joined with one pass
+  - cost= B（R）+ B（S）
+- 原则是读取R和S- join on X
+- 当Xr!=Xs
+  - 如果Xr小于Xs， 移动到下一个R
+  - else， 移动到下个S
+- 当Xr==Xs
+  - 连接 r and s， 然后
+  - 添加到output buffer
+- 重复直到所有record都被读到
+
+The sort-merge join结合了join操作和external merge sort
+
+- 第一个过程对大小为M的R和S进行排序，在这个过程中R和S独立处理
+- 通过external merge sort处理R and S，直到排序的运行总数小于M
+  - 如果M较大或R和S较小，则可能不需要此步骤
+- 通过比较R和S的运行，将external merge sort的最终合并阶段与连接相结合
+  - 不满足连接条件的记录将被丢弃
+  - 满足条件的记录被连接并输出
+
+##### 内存需求
+
+如果主内存足够，可以在两个过程中执行排序合并连接
+
+成本为3(B(R) + B(S))
+
+主内存必须足够大，以允许R和S的每次排序运行都有一个输入缓冲区
+
+- 主内存必须大于 根号下(B(R) + B(S))在两个过程中执行连接
+  - initial pass produces B(R) / M + B(S) / M sorted runs of size M
+  - 如果M大于根号下(B(R) + B(S))，那么B(R) / M + B(S) / M必须小于M
+
+![1657595550253](image/Part5/1657595550253.png)
+
+### zig-zag join
