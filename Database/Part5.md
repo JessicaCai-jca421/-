@@ -393,4 +393,4 @@ The sort-merge join结合了join操作和external merge sort
 
 ![1657595550253](image/Part5/1657595550253.png)
 
-### zig-zag join
+#### zig-zag join
